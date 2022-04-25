@@ -14,7 +14,7 @@ class ElementType(Enum):
     IMAGE = "image"
     BUTTON = "button"
     CONFIRM = "confirm"
-
+    OVERFLOW = "overflow"
 
 class TextType(Enum):
     """
@@ -180,3 +180,47 @@ class Button(Element):
         if self.confirm:
             button["confirm"] = self.confirm._resolve()
         return button
+
+class Option(Element):
+    def __init__(self, 
+                text: Union[str, Text], 
+                value: str, 
+                description:Optional[Union[str, Text]] = None, 
+                url: Optional[str] = None):
+
+        self.text = Text.to_text(text, max_length=75, force_plaintext=True)
+        self.value = value
+        self.description = description
+        if description:
+            self.description = Text.to_text(description, max_length=75, force_plaintext=True)
+        self.url = url
+    
+    def _resolve(self) -> Dict[str, Any]:
+        option = {}
+        option["text"] = self.text._resolve()
+        option["value"] = self.value
+        if self.description:
+            option["description"] = self.description
+        if self.url:
+            option["url"] = self.url
+        return option
+
+
+class OverflowMenu(Element):
+
+    def __init__(self, action_id: str, options: list[Option], confirm: Optional[Confirm] = None):
+        super().__init__(type_=ElementType.OVERFLOW)
+        self.action_id = action_id
+        self.options = options
+        self.confirm = confirm
+        
+        if len(self.options) > 5 or len(self.options) < 2:
+            raise InvalidUsageError("Overflow menu must have between 2 and 5 options")
+
+    def _resolve(self) -> Dict[str, Any]:
+        overflow = self._attributes()
+        overflow["action_id"] = self.action_id
+        overflow["options"] = [option._resolve() for option in self.options]
+        if self.confirm:
+            overflow["confirm"] = self.confirm._resolve()
+        return overflow
